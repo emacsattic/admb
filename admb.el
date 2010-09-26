@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  4.8
+;; Version:  5.0
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "4.8" "ADMB Mode version number.")
+(defconst admb-mode-version "5.0" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -29,10 +29,10 @@
 ;; manipulation, outline code navigation, templates, and smaller tools. The syntax groups for highlighting are:
 ;;
 ;; Face                          Example
+;; admb-section-face             DATA_SECTION
 ;; font-lock-builtin-face        objective_function_value
 ;; font-lock-comment-face        //
 ;; font-lock-constant-face       LOCAL_CALCS
-;; font-lock-doc-face            DATA_SECTION
 ;; font-lock-function-name-face  [FUNCTION] myfunction
 ;; font-lock-keyword-face        log
 ;; font-lock-type-face           int
@@ -76,6 +76,9 @@
 
 ;;; History:
 ;;
+;; 20 Sep 2010  5.0  Added user function `admb-open'. Improved `admb-cor', `admb-cpp', `admb-par', `admb-pin', and
+;;                   `admb-rep' so that files are opened in secondary window. Changed section highlighting to new
+;;                   `admb-section-face'. Bound C-c C-o to `admb-open' and C-c C-r to `admb-rep'.
 ;; 14 Jul 2010  4.8  Added internal function `admb-split-window'.
 ;;  8 Jul 2010  4.7  Improved documentation.
 ;; 28 Jun 2010  4.6  Renamed `admb-version' to `admb-mode-version'. Unbound C-return and S-return.
@@ -203,8 +206,6 @@ an example that does that:\n
   (setq admb-build-command \"myadmb\")
   (setq admb-comp-command \"myadcomp\")
   (setq admb-link-command \"myadlink\")
-  (set-face-attribute 'font-lock-doc-face nil
-                      :foreground \"black\" :weight 'bold)
   (set-face-attribute 'font-lock-function-name-face nil
                       :foreground \"brown\" :weight 'bold)
   (local-set-key [f9] 'admb-build)
@@ -213,6 +214,8 @@ an example that does that:\n
   :tag   "Hook"
   :type  'hook
   :group 'admb)
+(defface admb-section-face '((t :weight bold)) "Font Lock mode face used to highlight ADMB sections." :group 'admb)
+(defvar admb-section-face 'admb-section-face "Face name to use for ADMB sections.") ; byte-compile warns without this
 
 ;; 3  Internal variables
 
@@ -400,7 +403,7 @@ Use `admb-set-flags' to set `admb-flags', `admb-tpl2cpp-command', and
        '("<\\([A-Za-z_]*\\)>" (1 font-lock-constant-face))
        '("^[A-Z_]*\\(FUNCTION\\| *#define\\)[^(\n]+?\\([a-zA-Z0-9_]+\\)[(\n]"
          (2 font-lock-function-name-face)) ; skip type
-       (cons (concat "\\<\\(" (mapconcat 'eval SECTIONS "\\|") "\\)\\>") font-lock-doc-face)
+       (cons (concat "\\<\\(" (mapconcat 'eval SECTIONS "\\|") "\\)\\>") 'admb-section-face)
        (cons (regexp-opt LOCAL     'words) font-lock-constant-face)
        (cons (regexp-opt DATATYPES 'words) font-lock-type-face)
        (cons (regexp-opt FUNCTIONS 'words) font-lock-keyword-face)
@@ -421,7 +424,7 @@ Use `admb-set-flags' to set `admb-flags', `admb-tpl2cpp-command', and
     ["View Point Estimates" admb-par           ] ; :help "Open .par file"
     ["View Initial Values"  admb-pin           ] ; :help "Open .pin file"
     ["View C++"             admb-cpp           ] ; :help "Open C++ file"
-    ["Clean"                admb-clean         ] ; :help "Remove temporary files"
+    ["Clean Directory"      admb-clean         ] ; :help "Remove temporary files"
     "--"
     ["Outline"              admb-outline       ] ; :help "Navigate with outline"
     ["Imenu"                imenu              ] ; :help "Navigate with imenu"
@@ -445,9 +448,10 @@ Use `admb-set-flags' to set `admb-flags', `admb-tpl2cpp-command', and
     ["ADMB Mode Version"    admb-mode-version ])) ; :help "Show ADMB Mode version"
 (defvar admb-mode-abbrev-table nil)(define-abbrev-table 'admb-mode-abbrev-table ())
 (defvar admb-mode-map
+  ;; Don't use C-c C-                        x
   ;; Special   C-c C-        h
-  ;; Custom    C-c C- a cdef   jklm o   s  vw
-  ;; Available C-c C-  b    g i    n pqr tu  xyz
+  ;; Custom    C-c C- a cdef   jklm o  rs  vw
+  ;; Available C-c C-  b    g i    n pq  tu   yz
   (let ((map (make-sparse-keymap)))
     (easy-menu-define nil map nil admb-menu)
     (define-key map [f11]               'admb-outline       )
@@ -470,8 +474,9 @@ Use `admb-set-flags' to set `admb-flags', `admb-tpl2cpp-command', and
     (define-key map [?\C-c ?\C-k]       'admb-compile       )
     (define-key map [?\C-c ?\C-l]       'admb-link          )
     (define-key map [?\C-c ?\C-m]       'admb-run-makefile  )
-    (define-key map [?\C-c ?\C-o]       'admb-rep           )
+    (define-key map [?\C-c ?\C-o]       'admb-open          )
     (define-key map [?\C-c ?\C-p]       'admb-par           )
+    (define-key map [?\C-c ?\C-r]       'admb-rep           )
     (define-key map [?\C-c ?\C-s]       'admb-toggle-section)
     (define-key map [?\C-c ?\C-v]       'admb-run           )
     (define-key map [?\C-c ?\C-w]       'admb-toggle-window )
@@ -526,10 +531,8 @@ This command combines `admb-init', `admb-comp-command', and `admb-flags'."
   (interactive)(admb-split-window)
   (compile (concat admb-init admb-comp-command " " admb-flags " " (file-name-sans-extension (buffer-name))))
   (with-current-buffer "*compilation*" (setq show-trailing-whitespace nil)))
-(defun admb-cpp () "Open C++ file translated from TPL file." (interactive)
-  (find-file (concat (file-name-sans-extension (buffer-name)) ".cpp")))
-(defun admb-cor () "Open ADMB estimates (.cor) file." (interactive)
-  (find-file (concat (file-name-sans-extension (buffer-name)) ".cor")))
+(defun admb-cor () "Open ADMB estimates (.cor) file." (interactive)(admb-open "cor"))
+(defun admb-cpp () "Open C++ file translated from TPL file." (interactive)(admb-open "cpp"))
 (defun admb-endl () "Insert << endl; (or just endl;) and newline." (interactive)
   (delete-horizontal-space)(if (string-equal (char-to-string (preceding-char)) "<")(insert " endl;")
                              (insert " << endl;")))
@@ -545,6 +548,10 @@ This command combines `admb-init', `admb-link-command', and `admb-flags'."
   (message (concat "ADMB Mode version " admb-mode-version)))
 (defun admb-new-buffer () "Create new buffer." (interactive)
   (switch-to-buffer (generate-new-buffer "Untitled"))(eval (list (default-value 'major-mode))))
+(defun admb-open (ext) "Open file with extension EXT in secondary window." (interactive "sExtension: ")
+  (let ((file (concat (file-name-sans-extension (buffer-name)) "." ext))(tpl-window (selected-window)))
+    (if (not (file-regular-p file))(error "File %s not found" file)(admb-split-window)(find-file-other-window file)
+        (select-window tpl-window))))
 (defun admb-outline () "Navigate within ADMB file using `outline-mode'.\n
 If you haven't already configured an `outline-mode-hook', here is an example
 that makes it easy to return to `admb-mode':\n
@@ -556,15 +563,9 @@ that makes it easy to return to `admb-mode':\n
     (admb-mode)(beginning-of-line)))
 \(add-hook 'outline-mode-hook 'my-outline-hook)"
   (interactive)(let ((outreg outline-regexp))(outline-mode)(setq outline-regexp outreg))(outline-mode)(hide-body))
-(defun admb-par () "Open ADMB point estimates (.par) file." (interactive)
-  (let ((par-file (concat (file-name-sans-extension (buffer-name)) ".par")))
-    (if (file-regular-p par-file)(find-file par-file)(message "Point estimates file %s not found" par-file))))
-(defun admb-pin () "Open ADMB initial values (.pin) file." (interactive)
-  (let ((pin-file (concat (file-name-sans-extension (buffer-name)) ".pin")))
-    (if (file-regular-p pin-file)(find-file pin-file)(message "Initial values file %s not found" pin-file))))
-(defun admb-rep () "Open ADMB report (.rep) file." (interactive)
-  (let ((rep-file (concat (file-name-sans-extension (buffer-name)) ".rep")))
-    (if (file-regular-p rep-file)(find-file rep-file)(message "Report file %s not found" rep-file))))
+(defun admb-par () "Open ADMB point estimates (.par) file." (interactive)(admb-open "par"))
+(defun admb-pin () "Open ADMB initial values (.pin) file." (interactive)(admb-open "pin"))
+(defun admb-rep () "Open ADMB report (.rep) file." (interactive)(admb-open "rep"))
 (defun admb-rep-browser () "Open ADMB report (.rep) file with `browse-url'.\n
 The idea is to show the report file in an external  browser, but the actual
 behavior of `browse-url' varies between machines. In Windows, the @file{.rep} file
