@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  5.0
+;; Version:  5.1
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "5.0" "ADMB Mode version number.")
+(defconst admb-mode-version "5.1" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -76,6 +76,7 @@
 
 ;;; History:
 ;;
+;;  1 Oct 2010  5.1  Improved documentation.
 ;; 20 Sep 2010  5.0  Added user function `admb-open'. Improved `admb-cor', `admb-cpp', `admb-par', `admb-pin', and
 ;;                   `admb-rep' so that files are opened in secondary window. Changed section highlighting to new
 ;;                   `admb-section-face'. Bound C-c C-o to `admb-open' and C-c C-r to `admb-rep'.
@@ -724,7 +725,7 @@ current section in the mode line with `admb-toggle-section', and use
 Compile using `admb-build', or `admb-tpl2cpp', `admb-compile', and `admb-link'.
 Configure these compilation commands with `admb-set-flags' and by setting the
 variables `admb-init', `admb-build-command', `admb-comp-command', and
-admb-link-command'.\n
+`admb-link-command'.\n
 Use `admb-toggle-window' to set `admb-window-right' to your viewing preference.
 After compiling, use `admb-cpp' to debug, `admb-clean' to remove temporary
 files, and `admb-pin' to set initial parameter values. Run model with `admb-run'
