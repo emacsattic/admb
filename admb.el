@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  5.1
+;; Version:  6.0
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "5.1" "ADMB Mode version number.")
+(defconst admb-mode-version "6.0" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -76,6 +76,8 @@
 
 ;;; History:
 ;;
+;; 10 Oct 2010  6.0  Added user function `admb-toggle-flag'. Removed user function `admb-set-flags'. Rebound C-c C-- and
+;;                   restructured GUI menu accordingly.
 ;;  1 Oct 2010  5.1  Improved documentation.
 ;; 20 Sep 2010  5.0  Added user function `admb-open'. Improved `admb-cor', `admb-cpp', `admb-par', `admb-pin', and
 ;;                   `admb-rep' so that files are opened in secondary window. Changed section highlighting to new
@@ -224,17 +226,17 @@ an example that does that:\n
   "Compilation flags for `admb-build', `admb-compile', and `admb-link'.\n
 Any combination of space-separated -d, -r, and -s, specifying that the build
 target should be a DLL, ADMB-RE model, and/or in safe mode.\n
-Use `admb-set-flags' to set `admb-flags', `admb-tpl2cpp-command', and
+Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
 `admb-tpl2cpp-flags' simultaneously.")
 (defvar admb-tpl2cpp-command "tpl2cpp"
   "Shell command to translate TPL to C++, using `admb-tpl2cpp'.\n
-Use `admb-set-flags' to set `admb-flags', `admb-tpl2cpp-command', and
+Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
 `admb-tpl2cpp-flags' simultaneously.")
 (defvar admb-tpl2cpp-flags ""
   "Translation flags for `admb-tpl2cpp'.\n
 Any combination of space-separated -bound and -dll, specifying that the build
 target should be a DLL and/or in safe mode.\n
-Use `admb-set-flags' to set `admb-flags', `admb-tpl2cpp-command', and
+Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
 `admb-tpl2cpp-flags' simultaneously.")
 (defvar admb-font-lock-keywords
   (eval-when-compile
@@ -434,16 +436,11 @@ Use `admb-set-flags' to set `admb-flags', `admb-tpl2cpp-command', and
     ["Toggle Section"       admb-toggle-section] ; :help "Toggle section indicator"
     ["Toggle Window"        admb-toggle-window ] ; :help "Toggle secondary window"
     "--"
-    ("Target"
-     ["ADMB"               (admb-set-flags ""   ) :style toggle :selected (string-equal admb-flags ""           )]
-     ["ADMB (safe)"        (admb-set-flags "s"  ) :style toggle :selected (string-equal admb-flags "-g -s"      )]
-     ["ADMB (DLL)"         (admb-set-flags "d"  ) :style toggle :selected (string-equal admb-flags "-d"         )]
-     ["ADMB (safe DLL)"    (admb-set-flags "ds" ) :style toggle :selected (string-equal admb-flags "-d -g -s"   )]
-     "--"
-     ["ADMB-RE"            (admb-set-flags "r"  ) :style toggle :selected (string-equal admb-flags "-r"         )]
-     ["ADMB-RE (safe)"     (admb-set-flags "rs" ) :style toggle :selected (string-equal admb-flags "-g -r -s"   )]
-     ["ADMB-RE (DLL)"      (admb-set-flags "dr" ) :style toggle :selected (string-equal admb-flags "-d -r"      )]
-     ["ADMB-RE (safe DLL)" (admb-set-flags "drs") :style toggle :selected (string-equal admb-flags "-d -g -r -s")])
+    ["Target"               admb-toggle-flag   ] ; :help "Toggle compilation option"
+    ["-d: DLL"             (admb-toggle-flag "d") :style toggle :selected (string-match ".*d.*" admb-flags)]
+    ["-g: Debug"           (admb-toggle-flag "g") :style toggle :selected (string-match ".*g.*" admb-flags)]
+    ["-r: Random Effects"  (admb-toggle-flag "r") :style toggle :selected (string-match ".*r.*" admb-flags)]
+    ["-s: Safe"            (admb-toggle-flag "s") :style toggle :selected (string-match ".*s.*" admb-flags)]
     "--"
     ["Help"                 admb-help         ]   ; :help "Show help page"
     ["ADMB Mode Version"    admb-mode-version ])) ; :help "Show ADMB Mode version"
@@ -462,7 +459,7 @@ Use `admb-set-flags' to set `admb-flags', `admb-tpl2cpp-command', and
     (define-key map [tab]               'indent-relative    )
     (define-key map [M-return]          'admb-endl          )
     (define-key map [?\C-c C-backspace] 'admb-clean         )
-    (define-key map [?\C-c ?\C--]       'admb-set-flags     )
+    (define-key map [?\C-c ?\C--]       'admb-toggle-flag   )
     (define-key map [?\C-c ?\C-.]       'admb-mode-version  )
     (define-key map [?\C-c ?\C-/]       'admb-help          )
     (define-key map [?\C-c ?\C-a]       'admb-run-args      )
@@ -590,31 +587,6 @@ ending may need to be associated with the desired browser program."
 (defun admb-run-makefile () "Run Makefile in current directory, using `admb-run-makefile-command'."
   (interactive)(save-buffer)(admb-split-window)(compile admb-run-makefile-command)
   (with-current-buffer "*compilation*" (setq show-trailing-whitespace nil)))
-(defun admb-set-flags (flags) "Set compilation options, in the form of a magic string.\n
-This string may contain any or all of the letters 'd', 'r', and 's', specifying
-that the build target should be a DLL, ADMB-RE model, and/or in safe mode.\n
-This command sets `admb-tpl2cpp-command', `admb-tpl2cpp-flags', and `admb-flags'
-simultaneously."
-  (interactive "sFlags: ")
-  (let ((case-fold-search t))
-    (cond ((string-match "d.*r.*s\\|d.*s.*r\\|r.*d.*s\\|r.*s.*d\\|s.*d.*r\\|s.*r.*d" flags)
-           (message "Target: ADMB-RE (safe DLL)")
-           (setq admb-tpl2cpp-command "tpl2rem")(setq admb-tpl2cpp-flags "-bounds -dll")(setq admb-flags "-d -g -r -s"))
-          ((string-match "d.*r\\|r.*d" flags)(message "Target: ADMB-RE (DLL)")
-           (setq admb-tpl2cpp-command "tpl2rem")(setq admb-tpl2cpp-flags "-dll")(setq admb-flags "-d -r"))
-          ((string-match "d.*s\\|s.*d" flags)(message "Target: ADMB (safe DLL)")
-           (setq admb-tpl2cpp-command "tpl2cpp")(setq admb-tpl2cpp-flags "-bounds -dll")(setq admb-flags "-d -g -s"))
-          ((string-match "r.*s\\|s.*r" flags)(message "Target: ADMB-RE (safe)")
-           (setq admb-tpl2cpp-command "tpl2rem")(setq admb-tpl2cpp-flags "-bounds")(setq admb-flags "-g -r -s"))
-          ((string-match "d" flags)(message "Target: ADMB (DLL)")
-           (setq admb-tpl2cpp-command "tpl2cpp")(setq admb-tpl2cpp-flags "-dll")(setq admb-flags "-d"))
-          ((string-match "r" flags)(message "Target: ADMB-RE")
-           (setq admb-tpl2cpp-command "tpl2rem")(setq admb-tpl2cpp-flags "")(setq admb-flags "-r"))
-          ((string-match "s" flags)(message "Target: ADMB (safe)")
-           (setq admb-tpl2cpp-command "tpl2cpp")(setq admb-tpl2cpp-flags "-bounds")(setq admb-flags "-g -s"))
-          (t
-           (message "Target: ADMB")
-           (setq admb-tpl2cpp-command "tpl2cpp")(setq admb-tpl2cpp-flags "")(setq admb-flags "")))))
 (defun admb-split-window () "Split window if it is the only window, otherwise do nothing.\n
 The orientation of the split depends on the value of `admb-window-right'."
   (if (one-window-p)(if admb-window-right (split-window-horizontally)(split-window-vertically))))
@@ -701,6 +673,38 @@ PROCEDURE_SECTION
   Yfit = b0 + b1*X;
   RSS = norm2(Y-Yfit);
 ")(goto-char (point-min))(delete-char 1))
+(defun admb-toggle-flag (flag) "Toggle compilation option.\n
+FLAG is a string: \"d\" (dll), \"g\" (debug), \"r\" (random effects), or \"s\" (safe).\n
+This command sets `admb-tpl2cpp-command', `admb-tpl2cpp-flags', and `admb-flags'
+simultaneously."
+  (interactive "sToggle compilation option: ")
+  (let ((SS nil)) ; string splits, a list
+    (cond ((string-match "-?d" flag)
+           (setq SS (split-string admb-tpl2cpp-flags)) ; tpl2cpp flags
+           (if (member "-dll" SS)(setq SS (remove "-dll" SS))(setq SS (sort (cons "-dll" SS) 'string-lessp)))
+           (setq admb-tpl2cpp-flags (mapconcat 'eval SS " "))
+           (setq SS (split-string admb-flags)) ; admb flags
+           (if (member "-d" SS)(setq SS (remove "-d" SS))(setq SS (sort (cons "-d" SS) 'string-lessp)))
+           (setq admb-flags (mapconcat 'eval SS " ")))
+          ((string-match "-?g" flag)
+           (setq SS (split-string admb-flags)) ; admb flags
+           (if (member "-g" SS)(setq SS (remove "-g" SS))(setq SS (sort (cons "-g" SS) 'string-lessp)))
+           (setq admb-flags (mapconcat 'eval SS " ")))
+          ((string-match "-?r" flag)
+           (setq admb-tpl2cpp-command (if (string-equal admb-tpl2cpp-command "tpl2rem") "tpl2cpp" "tpl2rem")) ; tpl2cpp
+           (setq SS (split-string admb-flags)) ; admb flags
+           (if (member "-r" SS)(setq SS (remove "-r" SS))(setq SS (sort (cons "-r" SS) 'string-lessp)))
+           (setq admb-flags (mapconcat 'eval SS " ")))
+          ((string-match "-?s" flag)
+           (setq SS (split-string admb-tpl2cpp-flags)) ; tpl2cpp flags
+           (if (member "-bounds" SS)(setq SS (remove "-bounds" SS))(setq SS (sort (cons "-bounds" SS) 'string-lessp)))
+           (setq admb-tpl2cpp-flags (mapconcat 'eval SS " "))
+           (setq SS (split-string admb-flags)) ; admb flags
+           (if (member "-s" SS)(setq SS (remove "-s" SS))(setq SS (sort (cons "-s" SS) 'string-lessp)))
+           (setq admb-flags (mapconcat 'eval SS " "))))
+    (message (if (= (length admb-tpl2cpp-flags) 0) "Compilation options: %s %s   (%s%s)"
+               "Compilation options: %s %s   (%s %s)") admb-build-command admb-flags admb-tpl2cpp-command
+               admb-tpl2cpp-flags)))
 (defun admb-toggle-section () "Toggle whether the current section is indicated in the mode line." (interactive)
   (which-function-mode (if which-function-mode 0 1))
   (message "Section indicator %s" (if which-function-mode "ON" "OFF")))
@@ -723,7 +727,7 @@ sections using `admb-outline', `imenu', or `outline-minor-mode'. Indicate the
 current section in the mode line with `admb-toggle-section', and use
 `admb-endl', `admb-for', and `dabbrev-expand' to save keystrokes.\n
 Compile using `admb-build', or `admb-tpl2cpp', `admb-compile', and `admb-link'.
-Configure these compilation commands with `admb-set-flags' and by setting the
+Configure these compilation commands with `admb-toggle-flag' and by setting the
 variables `admb-init', `admb-build-command', `admb-comp-command', and
 `admb-link-command'.\n
 Use `admb-toggle-window' to set `admb-window-right' to your viewing preference.
