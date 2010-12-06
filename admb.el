@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  6.0
+;; Version:  6.1
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "6.0" "ADMB Mode version number.")
+(defconst admb-mode-version "6.1" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -76,6 +76,8 @@
 
 ;;; History:
 ;;
+;;  1 Dec 2010  6.1  Added keywords "allocate", "clock", "ctime", "difftime", "set_covariance_matrix", "strftime",
+;;                   "time", "time_t", and "vcubic_spline_function".
 ;; 10 Oct 2010  6.0  Added user function `admb-toggle-flag'. Removed user function `admb-set-flags'. Rebound C-c C-- and
 ;;                   restructured GUI menu accordingly.
 ;;  1 Oct 2010  5.1  Improved documentation.
@@ -250,7 +252,9 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
            '("LOC_CALCS"                           "LOCAL_CALCS"                         "END_CALCS"
              "USER_CODE"))
           (DATATYPES
-           '( ;; C++
+           '(;; C
+             "time_t"
+             ;; C++
              "bool"                                "char"                                "double"
              "int"                                 "long"                                "signed"
              "string"                              "unsigned"                            "void"
@@ -293,9 +297,10 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              "fmm"                                 "funnel_dvariable"                    "independent_variables"
              "model_data"                          "model_parameters"                    "prevariable"
              "likeprof_number"                     "random_number_generator"             "sdreport_number"
-             "sdreport_vector"                     "sdreport_matrix"                     "variable_model_parameters"))
+             "sdreport_vector"                     "sdreport_matrix"                     "variable_model_parameters"
+             "vcubic_spline_function"))
           (FUNCTIONS
-           '( ;; C++
+           '(;; C++
              "break"                               "case"                                "const"
              "default"                             "define"                              "if"
              "else"                                "for"                                 "goto"
@@ -318,8 +323,11 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              "find"                                "find_first_of"                       "find_last_of"
              "insert"                              "length"                              "replace"
              "rfind"                               "substr"
+             ;; C time
+             "clock"                               "ctime"                               "difftime"
+             "strftime"                            "time"
              ;; AUTODIF
-             "allocated"                           "nvarcalc"
+             "allocated"                           "nvarcalc"                            "set_covariance_matrix"
              ;; Basic math
              "abs"                                 "ceil"                                "cube"
              "exp"                                 "fabs"                                "factln"
@@ -353,10 +361,11 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              "outer_prod"                          "regression"                          "robust_regression"
              "solve"
              ;; Dot methods
-             "fill"                                "fill_multinomial"                    "fill_seqadd"
-             "fill_randbi"                         "fill_randn"                          "fill_randn_ni"
-             "fill_randpoisson"                    "fill_randu"                          "fill_randu_ni"
-             "indexmax"                            "indexmin"                            "initialize"
+             "allocate"                            "fill"                                "fill_multinomial"
+             "fill_seqadd"                         "fill_randbi"                         "fill_randn"
+             "fill_randn_ni"                       "fill_randpoisson"                    "fill_randu"
+             "fill_randu_ni"                       "indexmax"                            "indexmin"
+             "initialize"
              ;; Dot methods, col*, row*, and slice*
              "colfill"                             "colfill_randn"                       "colfill_randu"
              "colfill_seqadd"                      "colmax"                              "colmin"
@@ -383,7 +392,7 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              "option_match"                        "set_stepnumber"                      "set_stepsize"
              "shift"))
           (IMPORTANT
-           '( ;; Shell
+           '(;; Shell
              "exit"                                "system"
              ;; File input/output
              "adprogram_name"                      "change_datafile_name"                "change_pinfile_name"
