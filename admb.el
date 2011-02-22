@@ -1,13 +1,13 @@
 ;;; admb.el --- major mode for creating statistical models with AD Model Builder
 
-;; Copyright (C) 2003, 2007, 2008, 2009, 2010 Arni Magnusson
+;; Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  6.1
+;; Version:  6.3
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "6.1" "ADMB Mode version number.")
+(defconst admb-mode-version "6.3" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -62,12 +62,15 @@
 ;;
 ;; References:
 ;;
-;; ADMB Project. 2008. An introduction to AD Model Builder version 9.0.0 for use in nonlinear modeling and statistics.
-;;   http://admb-project.googlecode.com/files/admb.pdf
-;; ADMB Project. 2009. Random effects in AD Model Builder: ADMB-RE user guide.
-;;   http://admb-project.googlecode.com/files/admb-re.pdf
+;; Fournier, D. 2011. An introduction to AD Model Builder for use in nonlinear modeling and statistics. Version 10.0.
+;;   Honolulu: ADMB Foundation. [http://admb-project.org/documentation/manuals/admb-user-manuals]
+;; Fournier, D. 2011. AUTODIF: A C++ array language extension with automatic differentiation for use in nonlinear
+;;   modeling and statistics. Version 10.0. Honolulu: ADMB Foundation.
+;;   [http://admb-project.org/documentation/manuals/admb-user-manuals]
 ;; Magnusson, A. 2009. ADMB-IDE: Easy and efficient user interface. ADMB Foundation Newsletter 1(3):1-2.
-;;   http://admb-foundation.org/wp-content/uploads/Newsletter/ADMBNewsletterJuly2009.pdf
+;;   [http://admb-foundation.org/wp-content/uploads/Newsletter/ADMBNewsletterJuly2009.pdf]
+;; Skaug, H. and D. Fournier. 2011. Random effects in AD Model Builder: ADMB-RE user guide. Version 10.0. Honolulu: ADMB
+;;   Foundation. [http://admb-project.org/documentation/manuals/admb-user-manuals]
 ;;
 ;; Known issues:
 ;;
@@ -76,6 +79,12 @@
 
 ;;; History:
 ;;
+;; 19 Feb 2011  6.3  Added keywords "streampos" and "#undef".
+;; 17 Feb 2011  6.2  Added internal function `admb-send', improving `admb-build', `admb-compile', `admb-link', and
+;;                   `admb-run-makefile', and `admb-tpl2cpp'. Added keywords "prevariable_position",
+;;                   "restore_prevariable_derivative", "restore_prevariable_position", "restore_prevariable_value",
+;;                   "save_double_derivative", "save_prevariable_position", and "save_prevariable_value". Added GUI menu
+;;                   item for admb-open".
 ;;  1 Dec 2010  6.1  Added keywords "allocate", "clock", "ctime", "difftime", "set_covariance_matrix", "strftime",
 ;;                   "time", "time_t", and "vcubic_spline_function".
 ;; 10 Oct 2010  6.0  Added user function `admb-toggle-flag'. Removed user function `admb-set-flags'. Rebound C-c C-- and
@@ -257,7 +266,8 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              ;; C++
              "bool"                                "char"                                "double"
              "int"                                 "long"                                "signed"
-             "string"                              "unsigned"                            "void"
+             "streampos"                           "string"                              "unsigned"
+             "void"
              ;; AUTODIF
              "_CONST"                              "CLASS"                               "dvariable"
              "dvar_vector"                         "dvar_matrix"                         "dvar3_array"
@@ -296,9 +306,9 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              "dvar_vector_position"                "dvar_matrix_position"                "extern"
              "fmm"                                 "funnel_dvariable"                    "independent_variables"
              "model_data"                          "model_parameters"                    "prevariable"
-             "likeprof_number"                     "random_number_generator"             "sdreport_number"
-             "sdreport_vector"                     "sdreport_matrix"                     "variable_model_parameters"
-             "vcubic_spline_function"))
+             "prevariable_position"                "likeprof_number"                     "random_number_generator"
+             "sdreport_number"                     "sdreport_vector"                     "sdreport_matrix"
+             "variable_model_parameters"           "vcubic_spline_function"))
           (FUNCTIONS
            '(;; C++
              "break"                               "case"                                "const"
@@ -381,9 +391,11 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              "AD_SET_DERIVATIVES"                  "AD_SET_DERIVATIVES2"                 "AD_SET_DERIVATIVES4"
              "ADJOINT_CODE"                        "elem"                                "elem_value"
              "restore_dvar_vector_position"        "restore_dvar_vector_value"           "restore_dvar_matrix_position"
-             "restore_dvar_matrix_value"           "save_dvar_vector_position"           "save_dvar_vector_value"
-             "save_dvector_derivatives"            "save_dmatrix_derivatives"            "save_dvar_matrix_position"
-             "save_identifier_string"              "set_value"                           "size"
+             "restore_dvar_matrix_value"           "restore_prevariable_derivative"      "restore_prevariable_position"
+             "restore_prevariable_value"           "save_double_derivative"              "save_dvar_vector_position"
+             "save_dvar_vector_value"              "save_dvector_derivatives"            "save_dmatrix_derivatives"
+             "save_dvar_matrix_position"           "save_identifier_string"              "save_prevariable_position"
+             "save_prevariable_value"              "set_value"                           "size"
              "sub"                                 "value"                               "verify_identifier_string"
              ;; Special functions
              "ad_printf"                           "ad_begin_funnel"                     "ad_exit"
@@ -409,7 +421,7 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              "defined"                             "#define"                             "#elif"
              "#else"                               "#endif"                              "#if"
              "#ifdef"                              "#ifndef"                             "#include"
-             "RETURN_ARRAYS_DECREMENT"             "RETURN_ARRAYS_INCREMENT")))
+             "RETURN_ARRAYS_DECREMENT"             "RETURN_ARRAYS_INCREMENT"             "#undef")))
       (list
        '("\\([A-Za-z_]*\\)::" (1 font-lock-constant-face))
        '("<\\([A-Za-z_]*\\)>" (1 font-lock-constant-face))
@@ -436,6 +448,7 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
     ["View Point Estimates" admb-par           ] ; :help "Open .par file"
     ["View Initial Values"  admb-pin           ] ; :help "Open .pin file"
     ["View C++"             admb-cpp           ] ; :help "Open C++ file"
+    ["View Any"             admb-open          ] ; :help "Open model file"
     ["Clean Directory"      admb-clean         ] ; :help "Remove temporary files"
     "--"
     ["Outline"              admb-outline       ] ; :help "Navigate with outline"
@@ -520,7 +533,7 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
 (defun admb-build () "Build executable from TPL.\n
 This command combines `admb-init', `admb-build-command' and `admb-flags'."
   (interactive)(save-buffer)(admb-split-window)
-  (compile (concat admb-init admb-build-command " " admb-flags " " (file-name-sans-extension (buffer-name))))
+  (admb-send (concat admb-init admb-build-command " " admb-flags " " (file-name-sans-extension (buffer-name))))
   (with-current-buffer "*compilation*" (setq show-trailing-whitespace nil)))
 (defun admb-clean () "Remove temporary files." (interactive)
   (let* ((model (file-name-sans-extension (buffer-name))) ; fmin.log only in Linux
@@ -536,7 +549,7 @@ This command combines `admb-init', `admb-build-command' and `admb-flags'."
 (defun admb-compile () "Compile C++ to object code.\n
 This command combines `admb-init', `admb-comp-command', and `admb-flags'."
   (interactive)(admb-split-window)
-  (compile (concat admb-init admb-comp-command " " admb-flags " " (file-name-sans-extension (buffer-name))))
+  (admb-send (concat admb-init admb-comp-command " " admb-flags " " (file-name-sans-extension (buffer-name))))
   (with-current-buffer "*compilation*" (setq show-trailing-whitespace nil)))
 (defun admb-cor () "Open ADMB estimates (.cor) file." (interactive)(admb-open "cor"))
 (defun admb-cpp () "Open C++ file translated from TPL file." (interactive)(admb-open "cpp"))
@@ -549,7 +562,7 @@ This command combines `admb-init', `admb-comp-command', and `admb-flags'."
 (defun admb-link () "Link object code to executable.\n
 This command combines `admb-init', `admb-link-command', and `admb-flags'."
   (interactive)(admb-split-window)
-  (compile (concat admb-init admb-link-command " " admb-flags " " (file-name-sans-extension (buffer-name))))
+  (admb-send (concat admb-init admb-link-command " " admb-flags " " (file-name-sans-extension (buffer-name))))
   (with-current-buffer "*compilation*" (setq show-trailing-whitespace nil)))
 (defun admb-mode-version () "Show ADMB Mode version number." (interactive)
   (message (concat "ADMB Mode version " admb-mode-version)))
@@ -594,8 +607,10 @@ ending may need to be associated with the desired browser program."
     (with-current-buffer "*ADMB Output*" (kill-region (point-min)(point-max))(setq show-trailing-whitespace nil))
     (set-window-buffer (next-window) "*ADMB Output*")(start-process-shell-command cmd "*ADMB Output*" cmd)))
 (defun admb-run-makefile () "Run Makefile in current directory, using `admb-run-makefile-command'."
-  (interactive)(save-buffer)(admb-split-window)(compile admb-run-makefile-command)
+  (interactive)(save-buffer)(admb-split-window)(admb-send admb-run-makefile-command)
   (with-current-buffer "*compilation*" (setq show-trailing-whitespace nil)))
+(defun admb-send (cmd) "Send shell compilation command, after cleaning up spaces."
+  (compile (replace-regexp-in-string "  +" " " cmd)))
 (defun admb-split-window () "Split window if it is the only window, otherwise do nothing.\n
 The orientation of the split depends on the value of `admb-window-right'."
   (if (one-window-p)(if admb-window-right (split-window-horizontally)(split-window-vertically))))
@@ -723,7 +738,8 @@ simultaneously."
 (defun admb-tpl2cpp () "Translate TPL to C++.\n
 This command combines `admb-init', `admb-tpl2cpp-command', and `admb-tpl2cpp-flags'."
   (interactive)(save-buffer)(admb-split-window)
-  (compile (concat admb-init admb-tpl2cpp-command " " admb-tpl2cpp-flags " " (file-name-sans-extension (buffer-name))))
+  (admb-send
+   (concat admb-init admb-tpl2cpp-command " " admb-tpl2cpp-flags " " (file-name-sans-extension (buffer-name))))
   (with-current-buffer "*compilation*" (setq show-trailing-whitespace nil)))
 
 ;; 5  Main function
