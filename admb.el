@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  6.3
+;; Version:  6.4
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "6.3" "ADMB Mode version number.")
+(defconst admb-mode-version "6.4" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -76,9 +76,11 @@
 ;;
 ;; Indendation is not very smart
 ;; Cursor motion and deletions swallow entire underscore_separated_object_name, instead of pausing at each underscore
+;; Does not work in XEmacs, reportedly
 
 ;;; History:
 ;;
+;;  1 Mar 2011  6.4  Added issue regarding XEmacs.
 ;; 19 Feb 2011  6.3  Added keywords "streampos" and "#undef".
 ;; 17 Feb 2011  6.2  Added internal function `admb-send', improving `admb-build', `admb-compile', `admb-link', and
 ;;                   `admb-run-makefile', and `admb-tpl2cpp'. Added keywords "prevariable_position",
