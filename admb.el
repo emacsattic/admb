@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  6.4
+;; Version:  6.5
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "6.4" "ADMB Mode version number.")
+(defconst admb-mode-version "6.5" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -80,6 +80,7 @@
 
 ;;; History:
 ;;
+;; 31 Aug 2011  6.5  Improved documentation.
 ;;  1 Mar 2011  6.4  Added issue regarding XEmacs.
 ;; 19 Feb 2011  6.3  Added keywords "streampos" and "#undef".
 ;; 17 Feb 2011  6.2  Added internal function `admb-send', improving `admb-build', `admb-compile', `admb-link', and
@@ -590,7 +591,7 @@ that makes it easy to return to `admb-mode':\n
 (defun admb-rep () "Open ADMB report (.rep) file." (interactive)(admb-open "rep"))
 (defun admb-rep-browser () "Open ADMB report (.rep) file with `browse-url'.\n
 The idea is to show the report file in an external  browser, but the actual
-behavior of `browse-url' varies between machines. In Windows, the @file{.rep} file
+behavior of `browse-url' varies between machines. In Windows, the .rep file
 ending may need to be associated with the desired browser program."
   (interactive)
   (let ((rep-file (concat (file-name-sans-extension buffer-file-name) ".rep")))
