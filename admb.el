@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  6.5
+;; Version:  6.6
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "6.5" "ADMB Mode version number.")
+(defconst admb-mode-version "6.6" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -32,7 +32,7 @@
 ;; admb-section-face             DATA_SECTION
 ;; font-lock-builtin-face        objective_function_value
 ;; font-lock-comment-face        //
-;; font-lock-constant-face       LOCAL_CALCS
+;; font-lock-constant-face       PI
 ;; font-lock-function-name-face  [FUNCTION] myfunction
 ;; font-lock-keyword-face        log
 ;; font-lock-type-face           int
@@ -80,6 +80,8 @@
 
 ;;; History:
 ;;
+;;  1 Oct 2011  6.6  Added keywords "PI" and "sumsq". Made all keywords case-sensitive. Minor changes in `admb-template'
+;;                   and `admb-template-mini'.
 ;; 31 Aug 2011  6.5  Improved documentation.
 ;;  1 Mar 2011  6.4  Added issue regarding XEmacs.
 ;; 19 Feb 2011  6.3  Added keywords "streampos" and "#undef".
@@ -260,9 +262,9 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              "^SEPARABLE_FUNCTION"                 "^REPORT_SECTION"                     "^RUNTIME_SECTION"
              "^TOP_OF_MAIN_SECTION"                "^GLOBALS_SECTION"                    "^BETWEEN_PHASES_SECTION"
              "^NORMAL_PRIOR_FUNCTION"              "^FINAL_SECTION"))
-          (LOCAL
+          (CONSTANTS
            '("LOC_CALCS"                           "LOCAL_CALCS"                         "END_CALCS"
-             "USER_CODE"))
+             "PI"                                  "USER_CODE"))
           (DATATYPES
            '(;; C
              "time_t"
@@ -372,7 +374,7 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
              "extract_diagonal"                    "identity_matrix"                     "inv"
              "ln_det"                              "norm"                                "norm2"
              "outer_prod"                          "regression"                          "robust_regression"
-             "solve"
+             "solve"                               "sumsq"
              ;; Dot methods
              "allocate"                            "fill"                                "fill_multinomial"
              "fill_seqadd"                         "fill_randbi"                         "fill_randn"
@@ -431,7 +433,7 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
        '("^[A-Z_]*\\(FUNCTION\\| *#define\\)[^(\n]+?\\([a-zA-Z0-9_]+\\)[(\n]"
          (2 font-lock-function-name-face)) ; skip type
        (cons (concat "\\<\\(" (mapconcat 'eval SECTIONS "\\|") "\\)\\>") 'admb-section-face)
-       (cons (regexp-opt LOCAL     'words) font-lock-constant-face)
+       (cons (regexp-opt CONSTANTS 'words) font-lock-constant-face)
        (cons (regexp-opt DATATYPES 'words) font-lock-type-face)
        (cons (regexp-opt FUNCTIONS 'words) font-lock-keyword-face)
        (cons (regexp-opt IMPORTANT 'words) font-lock-builtin-face)))))
@@ -632,73 +634,74 @@ The orientation of the split depends on the value of `admb-window-right'."
 
 GLOBALS_SECTION
   #include \"admodel.h\"
-  const double pi = 3.141592654;
-  int mcmc_iteration = 0;
   ofstream mcmc_report(\"mcmc.csv\");
+  const double pi = 3.141592654;
 
 DATA_SECTION
   init_int n
-  init_vector X(1,n)
-  init_vector Y(1,n)
+  init_vector x(1,n)
+  init_vector y(1,n)
   number halfnlog2pi
+  int mcmc_lines
 
 PARAMETER_SECTION
   init_number b0
   init_number b1
-  init_number logsigmaMLE
-  sdreport_number sigmaMLE
-  vector Yfit(1,n)
-  matrix summary(1,n,1,3)  // | X | Y | Yfit |
+  init_number logsigma
+  sdreport_number sigma
+  vector yfit(1,n)
+  matrix summary(1,n,1,3)  // | x | y | yfit |
   objective_function_value neglogL
 
 PRELIMINARY_CALCS_SECTION
   halfnlog2pi = 0.5*n*log(2*pi);
+  mcmc_lines = 0;
 
 PROCEDURE_SECTION
-  Yfit = b0 + b1*X;
-  sigmaMLE = mfexp(logsigmaMLE);
-  neglogL = halfnlog2pi + n*log(sigmaMLE) + norm2(Y-Yfit)/(2*sigmaMLE*sigmaMLE);
+  yfit = b0 + b1*x;
+  sigma = mfexp(logsigma);
+  neglogL = halfnlog2pi + n*logsigma + norm2(y-yfit)/(2*sigma*sigma);
   if(mceval_phase())
     write_mcmc();
 
 REPORT_SECTION
   get_summary();
-  report<<\"# b0\"      <<endl<<b0           <<endl
-        <<\"# b1\"      <<endl<<b1           <<endl
-        <<\"# RSS\"     <<endl<<norm2(Y-Yfit)<<endl
-        <<\"# sigmaMLE\"<<endl<<sigmaMLE     <<endl
-        <<\"# neglogL\" <<endl<<neglogL<<endl<<endl;
+  report<<\"# b0\"     <<endl<<b0           <<endl
+        <<\"# b1\"     <<endl<<b1           <<endl
+        <<\"# RSS\"    <<endl<<norm2(y-yfit)<<endl
+        <<\"# sigma\"  <<endl<<sigma        <<endl
+        <<\"# neglogL\"<<endl<<neglogL<<endl<<endl;
   report<<\"# Model summary\"<<endl
-        <<\" X Y Yfit\"<<endl
+        <<\" x y yfit\"<<endl
         <<summary<<endl;
 
 FUNCTION get_summary
-  summary.colfill(1,X);
-  summary.colfill(2,Y);
-  summary.colfill(3,Yfit);
+  summary.colfill(1,x);
+  summary.colfill(2,y);
+  summary.colfill(3,yfit);
 
 FUNCTION write_mcmc
-  mcmc_iteration++;
-  if(mcmc_iteration == 1)
-    mcmc_report<<\"neglogL,b0,b1,sigmaMLE\"<<endl;
-  mcmc_report<<neglogL<<\",\"<<b0<<\",\"<<b1<<\",\"<<sigmaMLE<<endl;
+  if(mcmc_lines == 0)
+    mcmc_report<<\"neglogL,b0,b1,sigma\"<<endl;
+  mcmc_report<<neglogL<<\",\"<<b0<<\",\"<<b1<<\",\"<<sigma<<endl;
+  mcmc_lines++;
 ")(goto-char (point-min))(delete-char 1))
 (defun admb-template-mini () "Insert minimal AD Model Builder template." (interactive)
   (goto-char (point-min))(insert "
 DATA_SECTION
   init_int n
-  init_vector X(1,n)
-  init_vector Y(1,n)
+  init_vector x(1,n)
+  init_vector y(1,n)
 
 PARAMETER_SECTION
   init_number b0
   init_number b1
-  vector Yfit(1,n)
+  vector yfit(1,n)
   objective_function_value RSS
 
 PROCEDURE_SECTION
-  Yfit = b0 + b1*X;
-  RSS = norm2(Y-Yfit);
+  yfit = b0 + b1*x;
+  RSS = norm2(y-yfit);
 ")(goto-char (point-min))(delete-char 1))
 (defun admb-toggle-flag (flag) "Toggle compilation option.\n
 FLAG is a string: \"d\" (dll), \"g\" (debug), \"r\" (random effects), or \"s\" (safe).\n
@@ -768,7 +771,7 @@ application.\n
 \\{admb-mode-map}"
   (interactive)(kill-all-local-variables)(setq major-mode 'admb-mode)(setq mode-name "ADMB")
   (set (make-local-variable 'comment-start) "//")
-  (set (make-local-variable 'font-lock-defaults) '(admb-font-lock-keywords nil t nil))
+  (set (make-local-variable 'font-lock-defaults) '(admb-font-lock-keywords nil nil)) ; case-sensitive keywords
   (set (make-local-variable 'imenu-generic-expression) '((nil "^[A-Z].*" 0)))
   (set (make-local-variable 'indent-line-function) 'indent-relative)
   (set (make-local-variable 'outline-regexp) "[A-Z]")
