@@ -1,13 +1,13 @@
 ;;; admb.el --- major mode for creating statistical models with AD Model Builder
 
-;; Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011 Arni Magnusson
+;; Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011, 2012 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  6.6
+;; Version:  6.7
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "6.6" "ADMB Mode version number.")
+(defconst admb-mode-version "6.7" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -80,6 +80,7 @@
 
 ;;; History:
 ;;
+;; 12 Jan 2012  6.7  Improved `admb-open'.
 ;;  1 Oct 2011  6.6  Added keywords "PI" and "sumsq". Made all keywords case-sensitive. Minor changes in `admb-template'
 ;;                   and `admb-template-mini'.
 ;; 31 Aug 2011  6.5  Improved documentation.
@@ -575,8 +576,8 @@ This command combines `admb-init', `admb-link-command', and `admb-flags'."
   (switch-to-buffer (generate-new-buffer "Untitled"))(eval (list (default-value 'major-mode))))
 (defun admb-open (ext) "Open file with extension EXT in secondary window." (interactive "sExtension: ")
   (let ((file (concat (file-name-sans-extension (buffer-name)) "." ext))(tpl-window (selected-window)))
-    (if (not (file-regular-p file))(error "File %s not found" file)(admb-split-window)(find-file-other-window file)
-        (select-window tpl-window))))
+    (if (not (file-regular-p file))(error "File %s not found" file)(admb-split-window)(find-file-noselect file)
+        (set-window-buffer (next-window) file)(select-window tpl-window))))
 (defun admb-outline () "Navigate within ADMB file using `outline-mode'.\n
 If you haven't already configured an `outline-mode-hook', here is an example
 that makes it easy to return to `admb-mode':\n
