@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011, 2012 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  6.7
+;; Version:  6.8
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "6.7" "ADMB Mode version number.")
+(defconst admb-mode-version "6.8" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -80,6 +80,7 @@
 
 ;;; History:
 ;;
+;; 29 Feb 2012  6.8  Improved `admb-template' and `admb-template-mini'.
 ;; 12 Jan 2012  6.7  Improved `admb-open'.
 ;;  1 Oct 2011  6.6  Added keywords "PI" and "sumsq". Made all keywords case-sensitive. Minor changes in `admb-template'
 ;;                   and `admb-template-mini'.
@@ -633,44 +634,39 @@ The orientation of the split depends on the value of `admb-window-right'."
 // History:
 //----------------------------------------------------------------------------------------------------------------------
 
-GLOBALS_SECTION
-  #include \"admodel.h\"
-  ofstream mcmc_report(\"mcmc.csv\");
-  const double pi = 3.141592654;
-
 DATA_SECTION
   init_int n
   init_vector x(1,n)
   init_vector y(1,n)
   number halfnlog2pi
-  int mcmc_lines
 
 PARAMETER_SECTION
   init_number b0
   init_number b1
   init_number logsigma
+  number RSS
   sdreport_number sigma
   vector yfit(1,n)
   matrix summary(1,n,1,3)  // | x | y | yfit |
   objective_function_value neglogL
 
 PRELIMINARY_CALCS_SECTION
-  halfnlog2pi = 0.5*n*log(2*pi);
-  mcmc_lines = 0;
+  halfnlog2pi = 0.5*n*log(2.0*pi);
 
 PROCEDURE_SECTION
   yfit = b0 + b1*x;
+  RSS = sum(square(y-yfit));
   sigma = mfexp(logsigma);
-  neglogL = halfnlog2pi + n*logsigma + norm2(y-yfit)/(2*sigma*sigma);
+  neglogL = halfnlog2pi + n*logsigma + RSS/(2.0*square(sigma));
   if(mceval_phase())
     write_mcmc();
 
 REPORT_SECTION
   get_summary();
-  report<<\"# b0\"     <<endl<<b0           <<endl
-        <<\"# b1\"     <<endl<<b1           <<endl
-        <<\"# RSS\"    <<endl<<norm2(y-yfit)<<endl
-        <<\"# sigma\"  <<endl<<sigma        <<endl
+  report<<\"# b0\"     <<endl<<b0     <<endl
+        <<\"# b1\"     <<endl<<b1     <<endl
+        <<\"# RSS\"    <<endl<<RSS    <<endl
+        <<\"# sigma\"  <<endl<<sigma  <<endl
         <<\"# neglogL\"<<endl<<neglogL<<endl<<endl;
   report<<\"# Model summary\"<<endl
         <<\" x y yfit\"<<endl
@@ -686,6 +682,12 @@ FUNCTION write_mcmc
     mcmc_report<<\"neglogL,b0,b1,sigma\"<<endl;
   mcmc_report<<neglogL<<\",\"<<b0<<\",\"<<b1<<\",\"<<sigma<<endl;
   mcmc_lines++;
+
+GLOBALS_SECTION
+  #include \"admodel.h\"
+  ofstream mcmc_report(\"mcmc.csv\");
+  const double pi = 3.141592654;
+  int mcmc_lines = 0;
 ")(goto-char (point-min))(delete-char 1))
 (defun admb-template-mini () "Insert minimal AD Model Builder template." (interactive)
   (goto-char (point-min))(insert "
@@ -702,7 +704,7 @@ PARAMETER_SECTION
 
 PROCEDURE_SECTION
   yfit = b0 + b1*x;
-  RSS = norm2(y-yfit);
+  RSS = sum(sqare(y-yfit));
 ")(goto-char (point-min))(delete-char 1))
 (defun admb-toggle-flag (flag) "Toggle compilation option.\n
 FLAG is a string: \"d\" (dll), \"g\" (debug), \"r\" (random effects), or \"s\" (safe).\n
