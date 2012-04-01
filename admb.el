@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011, 2012 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  6.8
+;; Version:  6.10
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "6.8" "ADMB Mode version number.")
+(defconst admb-mode-version "6.10" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -67,6 +67,9 @@
 ;; Fournier, D. 2011. AUTODIF: A C++ array language extension with automatic differentiation for use in nonlinear
 ;;   modeling and statistics. Version 10.0. Honolulu: ADMB Foundation.
 ;;   [http://admb-project.org/documentation/manuals/admb-user-manuals]
+;; Fournier, D.A., H.J. Skaug, J. Ancheta, J. Ianelli, A. Magnusson, M.N. Maunder, A. Nielsen, and J. Sibert. 2012. AD
+;;   Model Builder: Using automatic differentiation for statistical inference of highly parameterized complex nonlinear
+;;   models. Optimization Methods and Software 27:233-249.
 ;; Magnusson, A. 2009. ADMB-IDE: Easy and efficient user interface. ADMB Foundation Newsletter 1(3):1-2.
 ;;   [http://admb-foundation.org/wp-content/uploads/Newsletter/ADMBNewsletterJuly2009.pdf]
 ;; Skaug, H. and D. Fournier. 2011. Random effects in AD Model Builder: ADMB-RE user guide. Version 10.0. Honolulu: ADMB
@@ -80,6 +83,8 @@
 
 ;;; History:
 ;;
+;; 29 Mar 2012  6.10 Improved keybindings on remote terminals.
+;; 17 Mar 2012  6.9  Improved `admb-for'. Added Fournier et al. (2012) reference.
 ;; 29 Feb 2012  6.8  Improved `admb-template' and `admb-template-mini'.
 ;; 12 Jan 2012  6.7  Improved `admb-open'.
 ;;  1 Oct 2011  6.6  Added keywords "PI" and "sumsq". Made all keywords case-sensitive. Minor changes in `admb-template'
@@ -486,8 +491,11 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
     (define-key map [f12]               'admb-template      )
     (define-key map [S-f12]             'admb-template-mini )
     (define-key map [tab]               'indent-relative    )
+    (define-key map [?\C-i]             'indent-relative    )
     (define-key map [M-return]          'admb-endl          )
+    (define-key map [?\C-\M-m]          'admb-endl          )
     (define-key map [?\C-c C-backspace] 'admb-clean         )
+    (define-key map [?\C-c 127]         'admb-clean         )
     (define-key map [?\C-c ?\C--]       'admb-toggle-flag   )
     (define-key map [?\C-c ?\C-.]       'admb-mode-version  )
     (define-key map [?\C-c ?\C-/]       'admb-help          )
@@ -563,7 +571,7 @@ This command combines `admb-init', `admb-comp-command', and `admb-flags'."
 (defun admb-endl () "Insert << endl; (or just endl;) and newline." (interactive)
   (delete-horizontal-space)(if (string-equal (char-to-string (preceding-char)) "<")(insert " endl;")
                              (insert " << endl;")))
-(defun admb-for () "Insert for(i=1; i<=; i++)." (interactive)(insert "for(i=1; i<=; i++)")(search-backward ";"))
+(defun admb-for () "Insert for(int i=1; i<=; i++)." (interactive)(insert "for(int i=1; i<=; i++)")(search-backward ";"))
 (defun admb-help () "Show help page for `admb-mode'." (interactive)
   (describe-function 'admb-mode)(switch-to-buffer "*Help*")(delete-other-windows)(message nil))
 (defun admb-link () "Link object code to executable.\n
