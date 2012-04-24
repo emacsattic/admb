@@ -3,11 +3,11 @@
 ;; Copyright (C) 2003, 2007, 2008, 2009, 2010, 2011, 2012 Arni Magnusson
 
 ;; Author:   Arni Magnusson
-;; Version:  6.10
+;; Version:  7.0
 ;; Keywords: languages
 ;; URL:      http://admb-project.org/community/editing-tools/emacs/admb.el
 
-(defconst admb-mode-version "6.10" "ADMB Mode version number.")
+(defconst admb-mode-version "7.0" "ADMB Mode version number.")
 
 ;; This admb.el file is provided under the general terms of the Simplified BSD License.
 ;; Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
@@ -83,6 +83,7 @@
 
 ;;; History:
 ;;
+;;  9 Apr 2012  7.0  Added user function `admb-kill-process', bound to C-c C-q.
 ;; 29 Mar 2012  6.10 Improved keybindings on remote terminals.
 ;; 17 Mar 2012  6.9  Improved `admb-for'. Added Fournier et al. (2012) reference.
 ;; 29 Feb 2012  6.8  Improved `admb-template' and `admb-template-mini'.
@@ -482,8 +483,8 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
 (defvar admb-mode-map
   ;; Don't use C-c C-                        x
   ;; Special   C-c C-        h
-  ;; Custom    C-c C- a cdef   jklm o  rs  vw
-  ;; Available C-c C-  b    g i    n pq  tu   yz
+  ;; Custom    C-c C- a cdef   jklm o qrs  vw
+  ;; Available C-c C-  b    g i    n p   tu   yz
   (let ((map (make-sparse-keymap)))
     (easy-menu-define nil map nil admb-menu)
     (define-key map [f11]               'admb-outline       )
@@ -511,6 +512,7 @@ Use `admb-toggle-flag' to set `admb-flags', `admb-tpl2cpp-command', and
     (define-key map [?\C-c ?\C-m]       'admb-run-makefile  )
     (define-key map [?\C-c ?\C-o]       'admb-open          )
     (define-key map [?\C-c ?\C-p]       'admb-par           )
+    (define-key map [?\C-c ?\C-q]       'admb-kill-process  )
     (define-key map [?\C-c ?\C-r]       'admb-rep           )
     (define-key map [?\C-c ?\C-s]       'admb-toggle-section)
     (define-key map [?\C-c ?\C-v]       'admb-run           )
@@ -574,6 +576,7 @@ This command combines `admb-init', `admb-comp-command', and `admb-flags'."
 (defun admb-for () "Insert for(int i=1; i<=; i++)." (interactive)(insert "for(int i=1; i<=; i++)")(search-backward ";"))
 (defun admb-help () "Show help page for `admb-mode'." (interactive)
   (describe-function 'admb-mode)(switch-to-buffer "*Help*")(delete-other-windows)(message nil))
+(defun admb-kill-process () "Stop ADMB compilation or model run." (interactive)(kill-process (car (process-list))))
 (defun admb-link () "Link object code to executable.\n
 This command combines `admb-init', `admb-link-command', and `admb-flags'."
   (interactive)(admb-split-window)
